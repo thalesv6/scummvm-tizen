@@ -1,0 +1,69 @@
+diff --git a/backends/platform/sdl/emscripten/emscripten.cpp b/backends/platform/sdl/emscripten/emscripten.cpp
+index dd6ec8e7b5..fb856b88f5 100644
+--- a/backends/platform/sdl/emscripten/emscripten.cpp
++++ b/backends/platform/sdl/emscripten/emscripten.cpp
+@@ -32,6 +32,9 @@
+ #include "backends/fs/emscripten/emscripten-fs-factory.h"
+ #include "backends/platform/sdl/emscripten/emscripten.h"
+ #include "backends/timer/emscripten/emscripten-timer.h"
++#include "backends/keymapper/keymapper.h"
++#include "backends/keymapper/keymapper-defaults.h"
++#include "backends/keymapper/standard-actions.h"
+ #include "common/file.h"
+ #ifdef USE_TTS
+ #include "backends/text-to-speech/emscripten/emscripten-text-to-speech.h"
+@@ -240,6 +243,42 @@ void OSystem_Emscripten::delayMillis(uint msecs) {
+ 	lastSleep = getMillis();
+ }
+ 
++// TV remotes and gamepads, following the Android TV bindings (backends/platform/android/android.cpp).
++// A backend binding replaces all default inputs of that action, so the existing ones are listed again.
++Common::KeymapperDefaultBindings *OSystem_Emscripten::getKeymapperDefaultBindings() {
++	Common::KeymapperDefaultBindings *bindings = new Common::KeymapperDefaultBindings();
++
++	// The remote Back key reaches SDL as AC_BACK: skip in games, close in dialogs.
++	bindings->setDefaultBinding(Common::kStandardActionsKeymapName, Common::kStandardActionSkip, "ESCAPE");
++	bindings->addDefaultBinding(Common::kStandardActionsKeymapName, Common::kStandardActionSkip, "JOY_Y");
++	bindings->addDefaultBinding(Common::kStandardActionsKeymapName, Common::kStandardActionSkip, "AC_BACK");
++	bindings->setDefaultBinding(Common::kGuiKeymapName, "CLOS", "ESCAPE");
++	bindings->addDefaultBinding(Common::kGuiKeymapName, "CLOS", "JOY_Y");
++	bindings->addDefaultBinding(Common::kGuiKeymapName, "CLOS", "AC_BACK");
++
++	// The gamepad D-pad drives the cursor like the left stick, so pads without a stick work in point-and-click games.
++	bindings->setDefaultBinding(Common::kGlobalKeymapName, "VMOUSEUP", "JOY_LEFT_STICK_Y-");
++	bindings->addDefaultBinding(Common::kGlobalKeymapName, "VMOUSEUP", "JOY_UP");
++	bindings->setDefaultBinding(Common::kGlobalKeymapName, "VMOUSEDOWN", "JOY_LEFT_STICK_Y+");
++	bindings->addDefaultBinding(Common::kGlobalKeymapName, "VMOUSEDOWN", "JOY_DOWN");
++	bindings->setDefaultBinding(Common::kGlobalKeymapName, "VMOUSELEFT", "JOY_LEFT_STICK_X-");
++	bindings->addDefaultBinding(Common::kGlobalKeymapName, "VMOUSELEFT", "JOY_LEFT");
++	bindings->setDefaultBinding(Common::kGlobalKeymapName, "VMOUSERIGHT", "JOY_LEFT_STICK_X+");
++	bindings->addDefaultBinding(Common::kGlobalKeymapName, "VMOUSERIGHT", "JOY_RIGHT");
++
++	// Free the D-pad from the direction actions; keyboard arrows still reach the GUI and games as plain keys.
++	const char *const keymapsWithDirections[] = { Common::kGuiKeymapName, "engine-default" };
++	const char *const directions[] = { Common::kStandardActionMoveUp, Common::kStandardActionMoveDown,
++	                                   Common::kStandardActionMoveLeft, Common::kStandardActionMoveRight };
++	for (const char *keymap : keymapsWithDirections) {
++		for (const char *direction : directions) {
++			bindings->setDefaultBinding(keymap, direction, "");
++		}
++	}
++
++	return bindings;
++}
++
+ #ifdef USE_CLOUD
+ bool OSystem_Emscripten::openUrl(const Common::String &url) {
+ 	if(url.hasPrefix("https://cloud.scummvm.org/")){
+diff --git a/backends/platform/sdl/emscripten/emscripten.h b/backends/platform/sdl/emscripten/emscripten.h
+index ecd1c54107..d57786c8ff 100644
+--- a/backends/platform/sdl/emscripten/emscripten.h
++++ b/backends/platform/sdl/emscripten/emscripten.h
+@@ -55,6 +55,7 @@ public:
+ 	Common::MutexInternal *createMutex() override;
+ 	void exportFile(const Common::Path &filename);
+ 	void delayMillis(uint msecs) override;
++	Common::KeymapperDefaultBindings *getKeymapperDefaultBindings() override;
+ 	void init() override;
+ 	void addSysArchivesToSearchSet(Common::SearchSet &s, int priority) override;
+ 

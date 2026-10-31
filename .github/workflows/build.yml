@@ -1,0 +1,33 @@
+# A v* tag builds both packages and publishes them as a pre-release.
+name: Build
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t scummvm-tizen .
+      - name: Let the container user write to the volume and the checkout
+        run: |
+          docker run --rm -v scummvm-src:/src alpine chown 1000:1000 /src
+          chmod a+w .
+      - name: Build ScummVM.wgt
+        run: docker run --rm -v scummvm-src:/src -v "$PWD:/work" scummvm-tizen bash /work/build.sh
+      - name: Build ScummVM-no-games.wgt
+        run: docker run --rm -e BUNDLE_FREEWARE_GAMES=false -v scummvm-src:/src -v "$PWD:/work" scummvm-tizen bash /work/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wgt
+          path: '*.wgt'
+      - name: Publish the pre-release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" --prerelease --generate-notes *.wgt

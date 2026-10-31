@@ -1,0 +1,4 @@
+*.wgt
+build.log
+games/
+pc-games/

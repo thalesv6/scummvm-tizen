@@ -1,0 +1,23 @@
+diff --git a/backends/platform/sdl/emscripten/emscripten.cpp b/backends/platform/sdl/emscripten/emscripten.cpp
+index b6794c84e4..dd6ec8e7b5 100644
+--- a/backends/platform/sdl/emscripten/emscripten.cpp
++++ b/backends/platform/sdl/emscripten/emscripten.cpp
+@@ -228,9 +228,15 @@ void OSystem_Emscripten::delayMillis(uint msecs) {
+ #ifdef ENABLE_EVENTRECORDER
+ 	if (!g_eventRec.processDelayMillis())
+ #endif
+-	SDL_Delay(msecs);
+-
+-	((EmscriptenTimerManager *)_timerManager)->checkTimers();
++	{
++		// Sleep in short slices so timers (the audio mixer) keep running during long delays.
++		uint32 end = getMillis() + msecs;
++		do {
++			uint32 now = getMillis();
++			SDL_Delay(end > now ? MIN<uint32>(end - now, 10) : 0);
++			((EmscriptenTimerManager *)_timerManager)->checkTimers();
++		} while (getMillis() < end);
++	}
+ 	lastSleep = getMillis();
+ }
+ 
