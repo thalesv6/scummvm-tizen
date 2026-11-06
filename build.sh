@@ -8,7 +8,7 @@ set -euo pipefail
 BUNDLE_FREEWARE_GAMES=${BUNDLE_FREEWARE_GAMES:-true}
 SCUMMVM_COMMIT=d187209bb0560cbdc8d6adea60cfa3c754a35544
 ENGINES=scumm,scumm_7_8,he,sky,queen,lure,drascula,agi,sci,agos,kyra,sword1,sword2,tinsel,saga,gob,cine
-CONFIGURE_ARGS="--disable-all-engines --enable-engine=$ENGINES --enable-release --enable-vkeybd --enable-mad --enable-freetype2 --enable-fribidi --datadir=/data"
+CONFIGURE_ARGS="--disable-all-engines --enable-engine=$ENGINES --enable-release --enable-vkeybd --enable-mad --enable-png --enable-zlib --enable-freetype2 --enable-fribidi --datadir=/data"
 
 SRC=/src/scummvm
 WIDGET=/src/widget
