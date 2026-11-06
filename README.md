@@ -5,7 +5,7 @@ packaged as a Tizen `.wgt` app, with TV remote and gamepad controls and a way to
 
 **Experimental.** It has only had a few minutes of play on a real TV, where it ran and was playable.
 Longer sessions, big games and save data surviving app updates are still untested. Please report what you find,
-including your TV's year and model.
+with a photo of **Manage games → TV info**, which shows your TV's model, its remote keys and whether downloads work.
 
 This project is not affiliated with or endorsed by the ScummVM team. Bugs here belong here, not on their tracker.
 

@@ -368,6 +368,7 @@
 				{ label: 'Send from phone', run: phoneMenu },
 				{ label: 'Games on TV', run: storedGamesMenu },
 				{ label: 'PC address: ' + (address || 'not set'), run: function () { pcAddressMenu(mainMenu); } },
+				{ label: 'TV info', run: tvInfoMenu },
 				{ label: 'Close', run: closeMenu }
 			],
 			onBack: closeMenu
@@ -579,6 +580,105 @@
 
 			draw();
 		});
+	}
+
+	// ---- TV info: what this TV offers, to tune the controls and to attach to bug reports ----
+
+	var DOWNLOAD_TEST_URLS = [
+		'https://downloads.scummvm.org/frs/extras/Lure%20of%20the%20Temptress/lure-1.1.zip',
+		'https://raw.githubusercontent.com/scummvm/scummvm-icons/master/icons/lure-lure.png'
+	];
+
+	function tizenCapability(key) {
+		try {
+			return tizen.systeminfo.getCapability(key);
+		} catch (e) {
+			return '?';
+		}
+	}
+
+	// Volume keys stay with the TV, so the volume keeps working while the screen is open.
+	function extraRemoteKeys() {
+		if (!window.tizen || !tizen.tvinputdevice) return [];
+		return tizen.tvinputdevice.getSupportedKeys().filter(function (key) {
+			return window.APP_REMOTE_KEYS.indexOf(key.name) < 0 && key.name.indexOf('Volume') !== 0;
+		});
+	}
+
+	function setKeysRegistered(keys, registered) {
+		keys.forEach(function (key) {
+			try {
+				if (registered) tizen.tvinputdevice.registerKey(key.name); else tizen.tvinputdevice.unregisterKey(key.name);
+			} catch (e) {
+				console.error('could not change key', key.name, e);
+			}
+		});
+	}
+
+	// HEAD through XHR: the app's fetch falls back to a full GET when fetch fails, which would download the whole zip.
+	function testDownload(url) {
+		return new Promise(function (resolve) {
+			var xhr = new XMLHttpRequest();
+			xhr.open('HEAD', url);
+			xhr.onload = function () { resolve('HTTP ' + xhr.status); };
+			xhr.onerror = function () { resolve('blocked or offline'); };
+			xhr.send();
+		});
+	}
+
+	function tvInfoMenu() {
+		var supportedKeys = window.tizen && tizen.tvinputdevice ? tizen.tvinputdevice.getSupportedKeys() : [];
+		var extraKeys = extraRemoteKeys();
+		var lastKey = 'none yet';
+		var downloads = DOWNLOAD_TEST_URLS.map(function () { return 'testing...'; });
+		var chrome = (navigator.userAgent.match(/Chrome\/([\d.]+)/) || [])[1] || '?';
+		setKeysRegistered(extraKeys, true);
+
+		function leave() {
+			setKeysRegistered(extraKeys, false);
+			mainMenu();
+		}
+
+		function keyName(code) {
+			var match = supportedKeys.filter(function (key) { return key.code === code; })[0];
+			return match ? match.name : 'not in the TV list';
+		}
+
+		function draw() {
+			var lines = [
+				'Last key pressed: ' + lastKey,
+				'Model: ' + (window.tizen ? tizenCapability('http://tizen.org/system/model_name') : 'not a TV'),
+				'Tizen: ' + (window.tizen ? tizenCapability('http://tizen.org/feature/platform.version') : '-') + '   Chrome: ' + chrome,
+				'Screen: ' + window.innerWidth + '×' + window.innerHeight + ' (device ' + window.screen.width + '×' + window.screen.height +
+					', ratio ' + window.devicePixelRatio + ')'
+			].concat(DOWNLOAD_TEST_URLS.map(function (url, i) {
+				return 'Download ' + url.split('/')[2] + ': ' + downloads[i];
+			}));
+			var keyList = supportedKeys.map(function (key) { return key.name + ' ' + key.code; }).join(' · ');
+			show({
+				title: 'TV info',
+				message: 'Press any remote button to see its code. Take a photo of this screen for bug reports.\n\n' + lines.join('\n'),
+				html: '<div style="font-size:20px;color:#aaa;margin-bottom:24px">Keys this TV reports: ' +
+					escapeHtml(keyList || 'none (not a TV)') + '</div>',
+				items: [{ label: 'Back', run: leave }],
+				onBack: leave,
+				onKey: function (code) {
+					// Yellow closes the whole menu without passing through leave().
+					if (code === KEY_YELLOW) setKeysRegistered(extraKeys, false);
+					lastKey = code + ' (' + keyName(code) + ')';
+					draw();
+					return false;
+				}
+			});
+		}
+
+		DOWNLOAD_TEST_URLS.forEach(function (url, i) {
+			testDownload(url).then(function (result) {
+				downloads[i] = result;
+				if (screen && screen.title === 'TV info') draw();
+			});
+		});
+		draw();
 	}
 
 	// ---- Keys: the menu listens on window, before tv.js (document), so it can keep keys from ScummVM ----

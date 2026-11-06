@@ -242,10 +242,13 @@ if (location.protocol === 'file:') {
 	document.addEventListener('keydown', onKeyDown, true);
 	document.addEventListener('keyup', onKeyUp, true);
 
+	// The TV info screen in games.js registers the other keys while it is open and unregisters them after.
+	window.APP_REMOTE_KEYS = ['ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue',
+		'MediaPlayPause', 'ChannelUp', 'ChannelDown', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
 	if (window.tizen) {
 		try {
-			tizen.tvinputdevice.registerKeyBatch(['ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue',
-				'MediaPlayPause', 'ChannelUp', 'ChannelDown', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+			tizen.tvinputdevice.registerKeyBatch(window.APP_REMOTE_KEYS);
 		} catch (e) {
 			console.error('registerKeyBatch failed', e);
 		}
