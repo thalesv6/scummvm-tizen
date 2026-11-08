@@ -368,11 +368,24 @@
 				{ label: 'Send from phone', run: phoneMenu },
 				{ label: 'Games on TV', run: storedGamesMenu },
 				{ label: 'PC address: ' + (address || 'not set'), run: function () { pcAddressMenu(mainMenu); } },
+				{ label: 'Cursor speed: ' + window.currentCursorSpeed(), run: changeCursorSpeed },
 				{ label: 'TV info', run: tvInfoMenu },
 				{ label: 'Close', run: closeMenu }
 			],
 			onBack: closeMenu
 		});
+	}
+
+	// tv.js opens the menu when Play/Pause is held: the small remote has no Yellow key of its own.
+	window.openGameManager = mainMenu;
+
+	// Redraws the menu with the new speed in the label, keeping the focus on this item.
+	function changeCursorSpeed() {
+		var focusedItem = focusIndex;
+		window.nextCursorSpeed();
+		mainMenu();
+		focusIndex = focusedItem;
+		render();
 	}
 
 	function messageScreen(title, message, onBack) {

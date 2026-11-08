@@ -39,7 +39,8 @@ if (location.protocol === 'file:') {
 	})();
 }
 
-// Remote control → mouse and ScummVM keys. Arrows move ScummVM's cursor; OK clicks (held: right click);
+// Remote control → mouse and ScummVM keys, built for the small Smart Remote (arrows, OK, Back, Play/Pause, CH+/−).
+// Arrows move ScummVM's cursor; OK is the left button (held: drag); Play/Pause is a right click (held: game manager);
 // Back is AC_BACK (held: ScummVM menu). A USB keyboard switches arrows and OK back to plain keys.
 (function () {
 	// Cursor tuning, in screen pixels; adjust on the real TV.
@@ -49,15 +50,19 @@ if (location.protocol === 'file:') {
 	var CURSOR_SPEED_START = 2;
 	var CURSOR_SPEED_MAX = 22;
 	var CURSOR_ACCEL_MS = 1200;
+	// Multiplies the glide speed; picked in the game manager and kept across restarts.
+	var CURSOR_SPEED_FACTORS = { Slow: 0.5, Normal: 1, Fast: 1.6 };
+	var CURSOR_SPEED_STORAGE_KEY = 'scummvm-cursor-speed';
 
-	// How long OK / Back must be held to count as a hold instead of a tap.
-	var OK_HOLD_MS = 500;
+	// How long Back / Play/Pause must be held to count as a hold instead of a tap.
 	var BACK_HOLD_MS = 800;
+	var PLAY_PAUSE_HOLD_MS = 800;
 	var MODIFIER_RELEASE_DELAY_MS = 100;
 
 	var KEY_OK = 13;
 	var KEY_BACK = 10009;
 	var KEY_GREEN = 404;
+	var KEY_PLAY_PAUSE = 10252;
 	var ARROW_DIRECTIONS = { 37: [-1, 0], 38: [0, -1], 39: [1, 0], 40: [0, 1] };
 	var SCUMMVM_MENU = { key: 'F5', code: 'F5', ctrl: true };
 	// SDL turns the BrowserBack code into AC_BACK, which the keymap patch binds to skip / close.
@@ -66,7 +71,6 @@ if (location.protocol === 'file:') {
 		403: SCUMMVM_MENU,                                // Red: ScummVM global menu (save/load/quit)
 		// Yellow (405) opens the game manager in games.js.
 		406: { key: 'F7', code: 'F7', ctrl: true },       // Blue: virtual keyboard
-		10252: { key: ' ', code: 'Space' },               // Play/Pause: pause game
 		427: { key: '.', code: 'Period' },                // CH+: skip dialogue line
 		428: { key: 'F7', code: 'F7', ctrl: true }        // CH-: virtual keyboard
 	};
@@ -83,6 +87,29 @@ if (location.protocol === 'file:') {
 	var keyboardMode = false;
 	var holdTimers = {};
 	var heldLong = {};
+	var cursorSpeed = savedCursorSpeed();
+
+	function savedCursorSpeed() {
+		try {
+			var saved = localStorage.getItem(CURSOR_SPEED_STORAGE_KEY);
+			return CURSOR_SPEED_FACTORS[saved] ? saved : 'Normal';
+		} catch (e) {
+			return 'Normal';
+		}
+	}
+
+	// Called by the game manager's "Cursor speed" item; returns the new speed's name.
+	window.nextCursorSpeed = function () {
+		var names = Object.keys(CURSOR_SPEED_FACTORS);
+		cursorSpeed = names[(names.indexOf(cursorSpeed) + 1) % names.length];
+		try {
+			localStorage.setItem(CURSOR_SPEED_STORAGE_KEY, cursorSpeed);
+		} catch (e) {
+			console.error('could not save the cursor speed', e);
+		}
+		return cursorSpeed;
+	};
+	window.currentCursorSpeed = function () { return cursorSpeed; };
 
 	function canvas() {
 		return document.getElementById('canvas');
@@ -131,7 +158,8 @@ if (location.protocol === 'file:') {
 		var heldFor = now - movingSince - CURSOR_HOLD_DELAY_MS;
 		if (heldFor > 0) {
 			var ramp = Math.min(1, heldFor / CURSOR_ACCEL_MS);
-			stepCursor(dx, dy, CURSOR_SPEED_START + (CURSOR_SPEED_MAX - CURSOR_SPEED_START) * ramp);
+			var speed = CURSOR_SPEED_START + (CURSOR_SPEED_MAX - CURSOR_SPEED_START) * ramp;
+			stepCursor(dx, dy, speed * CURSOR_SPEED_FACTORS[cursorSpeed]);
 		}
 		requestAnimationFrame(moveCursor);
 	}
@@ -164,7 +192,7 @@ if (location.protocol === 'file:') {
 	}
 
 	function isRemoteOnlyKey(code) {
-		return code === KEY_BACK || code === KEY_GREEN || FORWARDED_KEYS[code] !== undefined;
+		return code === KEY_BACK || code === KEY_GREEN || code === KEY_PLAY_PAUSE || FORWARDED_KEYS[code] !== undefined;
 	}
 
 	function isKeyboardLetter(code) {
@@ -192,9 +220,12 @@ if (location.protocol === 'file:') {
 				}
 			}
 		} else if (code === KEY_OK) {
-			if (!holdTimers[code]) startHold(code, OK_HOLD_MS, function () { pressButton(2); });
+			if (!event.repeat) pressButton(0);
+		// Holds start on the first keydown only: auto-repeat keydowns after the hold fired would start another one.
 		} else if (code === KEY_BACK) {
-			if (!holdTimers[code]) startHold(code, BACK_HOLD_MS, function () { tapForwardedKey(SCUMMVM_MENU); });
+			if (!event.repeat) startHold(code, BACK_HOLD_MS, function () { tapForwardedKey(SCUMMVM_MENU); });
+		} else if (code === KEY_PLAY_PAUSE) {
+			if (!event.repeat) startHold(code, PLAY_PAUSE_HOLD_MS, window.openGameManager);
 		} else if (code === KEY_GREEN) {
 			if (!event.repeat) pressButton(2);
 		} else if (FORWARDED_KEYS[code]) {
@@ -214,14 +245,14 @@ if (location.protocol === 'file:') {
 		if (ARROW_DIRECTIONS[code]) {
 			delete heldArrows[code];
 		} else if (code === KEY_OK) {
-			if (endHoldWasTap(code)) {
-				pressButton(0);
-				releaseButton(0);
-			} else {
-				releaseButton(2);
-			}
+			releaseButton(0);
 		} else if (code === KEY_BACK) {
 			if (endHoldWasTap(code)) tapForwardedKey(AC_BACK);
+		} else if (code === KEY_PLAY_PAUSE) {
+			if (endHoldWasTap(code)) {
+				pressButton(2);
+				releaseButton(2);
+			}
 		} else if (code === KEY_GREEN) {
 			releaseButton(2);
 		} else if (!FORWARDED_KEYS[code]) {

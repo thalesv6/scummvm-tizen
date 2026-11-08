@@ -27,7 +27,7 @@ Install it with Apps2Samsung, which re-signs the package with your TV's certific
 
 Beneath a Steel Sky (CD), Flight of the Amazon Queen, Lure of the Temptress and Drascula come with `ScummVM.wgt`.
 
-Your own games can be added without rebuilding. On the TV, the **Yellow** key (123 button on the remote) opens
+Your own games can be added without rebuilding. On the TV, holding **Play/Pause** (or the **Yellow** key) opens
 **Manage games**, which copies a game to the TV. Once copied, it runs without the PC or the USB drive.
 
 - **From a PC:** put each game in a subfolder of `pc-games/` and start the server (Python only, nothing to install):
@@ -55,19 +55,22 @@ under **Global Options → Keymaps**.
 
 ### Remote
 
+Everything works with the small Smart Remote, which has no color keys of its own.
+
 | Key | Action |
 | --- | --- |
 | Arrows | Move the cursor (tap = 4 px, hold = glide and accelerate) |
-| OK | Left click |
-| OK held (½ s) | Right click |
+| OK | Left click (hold to drag) |
+| Play/Pause | Right click |
+| Play/Pause held | Manage games |
 | Back | Skip cutscene, close menus (`AC_BACK`) |
-| Back held | ScummVM menu (save, load, quit) |
-| Play/Pause | Pause |
+| Back held | ScummVM menu (save, load, pause, quit) |
 | CH+ / CH− | Skip dialogue line / virtual keyboard |
-| Red / Green | ScummVM menu / right click |
-| Yellow / Blue | Manage games / virtual keyboard |
 
-The color and number keys appear through the remote's **123** button.
+The cursor's glide speed is set under **Manage games → Cursor speed**.
+
+Remotes with color keys also get Red (ScummVM menu), Green (right click), Yellow (manage games) and
+Blue (virtual keyboard). On the small remote they appear through the **123** button.
 
 ### Gamepad
 
