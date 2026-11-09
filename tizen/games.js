@@ -18,6 +18,7 @@
 	var DATA_ROOT_INDEX = '/data/index.json';
 	var INDEX_FILE = 'index.json';
 	var PC_ADDRESS_STORAGE_KEY = 'scummvm-pc-address';
+	var HELP_SEEN_STORAGE_KEY = 'scummvm-help-seen';
 	var DB_NAME = 'scummvm-tv-games';
 	var FILES_STORE = 'files';
 	var SIZES_STORE = 'sizes';
@@ -368,12 +369,48 @@
 				{ label: 'Send from phone', run: phoneMenu },
 				{ label: 'Games on TV', run: storedGamesMenu },
 				{ label: 'PC address: ' + (address || 'not set'), run: function () { pcAddressMenu(mainMenu); } },
+				{ label: 'Controls help', run: function () { helpScreen(mainMenu); } },
 				{ label: 'Cursor speed: ' + window.currentCursorSpeed(), run: changeCursorSpeed },
 				{ label: 'TV info', run: tvInfoMenu },
 				{ label: 'Close', run: closeMenu }
 			],
 			onBack: closeMenu
 		});
+	}
+
+	// Written for the small Smart Remote; tv.js has the full map.
+	function helpScreen(onBack) {
+		show({
+			title: 'How to play',
+			message: 'Arrows: move the cursor\n' +
+				'OK: click (hold to drag)\n' +
+				'Play/Pause: right click\n' +
+				'Back: skip a scene, close a menu\n' +
+				'Back held: ScummVM menu (save, load, quit)\n' +
+				'CH+: skip a line of dialogue    CH−: virtual keyboard\n' +
+				'Play/Pause held: this game manager, to add your own games\n\n' +
+				'To play: point at a game and click Start.\n' +
+				'This help stays under Manage games → Controls help.',
+			items: [{ label: 'Got it', run: onBack }],
+			onBack: onBack
+		});
+	}
+
+	function helpWasSeen() {
+		try {
+			return localStorage.getItem(HELP_SEEN_STORAGE_KEY) === 'true';
+		} catch (e) {
+			return false;
+		}
+	}
+
+	function closeFirstRunHelp() {
+		try {
+			localStorage.setItem(HELP_SEEN_STORAGE_KEY, 'true');
+		} catch (e) {
+			console.error('could not save that the help was seen', e);
+		}
+		closeMenu();
 	}
 
 	// tv.js opens the menu when Play/Pause is held: the small remote has no Yellow key of its own.
@@ -719,4 +756,6 @@
 		delete consumedKeys[event.keyCode];
 		stop(event);
 	}, true);
+
+	if (!helpWasSeen()) helpScreen(closeFirstRunHelp);
 })();

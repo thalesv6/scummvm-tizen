@@ -55,7 +55,8 @@ under **Global Options → Keymaps**.
 
 ### Remote
 
-Everything works with the small Smart Remote, which has no color keys of its own.
+Everything works with the small Smart Remote, which has no color keys of its own. The app shows this map
+the first time it opens, and again under **Manage games → Controls help**.
 
 | Key | Action |
 | --- | --- |
