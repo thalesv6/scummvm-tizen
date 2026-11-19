@@ -22,6 +22,11 @@
 	var DB_NAME = 'scummvm-tv-games';
 	var FILES_STORE = 'files';
 	var SIZES_STORE = 'sizes';
+	var COVERS_STORE = 'covers';
+	var DB_VERSION = 2;
+	var COVERS_PREFIX = '/data/gui-icons/icons/';
+	// build.sh fills in the commit its covers index was made from, so the sizes in the index match these files.
+	var COVERS_REMOTE_URL = 'https://raw.githubusercontent.com/scummvm/scummvm-icons/@SCUMMVM_ICONS_COMMIT@/icons/';
 	var BYTES_PER_MB = 1024 * 1024;
 
 	// ---- Storage: one record per file, keyed "<game>/<path inside the game>" ----
@@ -31,10 +36,12 @@
 	function openDb() {
 		if (!dbPromise) {
 			dbPromise = new Promise(function (resolve, reject) {
-				var open = indexedDB.open(DB_NAME, 1);
+				var open = indexedDB.open(DB_NAME, DB_VERSION);
+				// Version 1 had files and sizes; version 2 adds covers.
 				open.onupgradeneeded = function () {
-					open.result.createObjectStore(FILES_STORE);
-					open.result.createObjectStore(SIZES_STORE);
+					[FILES_STORE, SIZES_STORE, COVERS_STORE].forEach(function (store) {
+						if (!open.result.objectStoreNames.contains(store)) open.result.createObjectStore(store);
+					});
 				};
 				open.onsuccess = function () { resolve(open.result); };
 				open.onerror = function () { reject(open.error); };
@@ -131,9 +138,56 @@
 		});
 	}
 
+	// ---- Covers: downloaded once from scummvm-icons, then kept on the TV ----
+
+	// Runs work(store) on the covers store; resolves with the request's result once the transaction commits.
+	function coversRequest(mode, work) {
+		return openDb().then(function (db) {
+			return new Promise(function (resolve, reject) {
+				var tx = db.transaction(COVERS_STORE, mode);
+				var request = work(tx.objectStore(COVERS_STORE));
+				tx.oncomplete = function () { resolve(request.result); };
+				tx.onerror = function () { reject(tx.error); };
+			});
+		});
+	}
+
+	// Keyed by the full URL: a cover from another scummvm-icons commit may have a different size.
+	function downloadedCoverResponse(name) {
+		var url = COVERS_REMOTE_URL + name;
+		return coversRequest('readonly', function (store) { return store.get(url); }).then(function (saved) {
+			if (saved) return new Response(saved, { status: 200 });
+			return previousFetch(url).then(function (response) {
+				if (!response.ok) throw new Error(url + ': HTTP ' + response.status);
+				return response.arrayBuffer();
+			}).then(function (buffer) {
+				coversRequest('readwrite', function (store) { return store.put(buffer, url); }).catch(function (error) {
+					console.error('could not keep the cover', name, error);
+				});
+				return new Response(buffer, { status: 200 });
+			});
+		}).catch(function (error) {
+			console.error('no cover for', name, error);
+			return new Response('', { status: 404 });
+		});
+	}
+
+	// The package has the freeware covers; the rest are in the index but not in the package.
+	function coverResponse(url, input, init) {
+		var name = url.slice(COVERS_PREFIX.length);
+		return previousFetch(input, init).then(function (response) {
+			return response.ok ? response : downloadedCoverResponse(name);
+		}, function () {
+			return downloadedCoverResponse(name);
+		});
+	}
+
 	var previousFetch = window.fetch;
 	window.fetch = function (input, init) {
 		var url = input instanceof Request ? input.url : String(input);
+		if (url.indexOf(COVERS_PREFIX) === 0 && url.slice(-4) === '.png') {
+			return coverResponse(url, input, init);
+		}
 		if (url === DATA_ROOT_INDEX) {
 			return previousFetch(input, init)
 				.then(function (response) { return response.json(); })

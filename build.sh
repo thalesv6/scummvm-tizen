@@ -7,6 +7,7 @@ set -euo pipefail
 
 BUNDLE_FREEWARE_GAMES=${BUNDLE_FREEWARE_GAMES:-true}
 SCUMMVM_COMMIT=d187209bb0560cbdc8d6adea60cfa3c754a35544
+SCUMMVM_ICONS_COMMIT=1ef876f6ea88a20bccc70be6d12ae0ee0d8594e7
 ENGINES=scumm,scumm_7_8,he,sky,queen,lure,drascula,agi,sci,agos,kyra,sword1,sword2,tinsel,saga,gob,cine
 CONFIGURE_ARGS="--disable-all-engines --enable-engine=$ENGINES --enable-release --enable-vkeybd --enable-mad --enable-png --enable-zlib --enable-freetype2 --enable-fribidi --datadir=/data"
 
@@ -64,9 +65,40 @@ if [ -d /work/games ]; then
 	cp -r /work/games/. "$WIDGET/data/games/"
 fi
 
+# Covers for the grid launcher. The freeware ones come in the package; games.js downloads the rest from
+# scummvm-icons on demand. http-fs only reads files its index.json names, with their exact size, so the index
+# lists every cover of our engines at the pinned commit.
+COVERS="$WIDGET/data/gui-icons/icons"
+COVERS_TREE="/src/scummvm-icons-$SCUMMVM_ICONS_COMMIT.json"
+mkdir -p "$COVERS"
+if [ "$BUNDLE_FREEWARE_GAMES" = true ]; then
+	unzip -q -o -j "$SRC/gui/themes/gui-icons.dat" icons/sky-sky.png icons/queen-queen.png icons/lure-lure.png \
+		icons/drascula-drascula.png -d "$COVERS"
+fi
+[ -f "$COVERS_TREE" ] || wget -nv -O "$COVERS_TREE" \
+	"https://api.github.com/repos/scummvm/scummvm-icons/git/trees/$SCUMMVM_ICONS_COMMIT?recursive=1"
+
 python3 "$SRC/dists/emscripten/build-make_http_index.py" "$WIDGET/data"
 
+python3 - "$COVERS_TREE" "$COVERS" "$ENGINES" <<'EOF'
+import json, os, re, sys
+tree_file, covers, engines = sys.argv[1], sys.argv[2], sys.argv[3].split(",")
+cover_name = re.compile(r"^icons/((" + "|".join(engines) + r")[-.][^/]*\.png)$")
+index = {}
+for entry in json.load(open(tree_file))["tree"]:
+    match = cover_name.match(entry["path"])
+    if match:
+        index[match.group(1)] = entry["size"]
+# The bundled copies come from gui-icons.dat, which may not match the pinned commit byte for byte.
+for name in os.listdir(covers):
+    if name.endswith(".png"):
+        index[name] = os.path.getsize(os.path.join(covers, name))
+json.dump(index, open(os.path.join(covers, "index.json"), "w"))
+print(len(index), "covers listed")
+EOF
+
 cp /work/tizen/config.xml /work/tizen/tv.js /work/tizen/games.js /work/tizen/qrcode.js /work/tizen/scummvm.ini "$WIDGET/"
+sed -i "s|@SCUMMVM_ICONS_COMMIT@|$SCUMMVM_ICONS_COMMIT|" "$WIDGET/games.js"
 if [ "$BUNDLE_FREEWARE_GAMES" = true ]; then
 	cat /work/tizen/freeware-games.ini >> "$WIDGET/scummvm.ini"
 fi

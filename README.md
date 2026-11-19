@@ -46,6 +46,10 @@ Your own games can be added without rebuilding. On the TV, holding **Play/Pause*
 
 To play: **Add Game...** → `/data/tv` → the game's folder. "Games on TV" lists and deletes copied games.
 
+The launcher shows a cover for each game. The freeware covers come in the package; covers for your own games are
+downloaded from [scummvm-icons](https://github.com/scummvm/scummvm-icons) the first time the launcher shows them,
+then kept on the TV.
+
 Files are held in memory while a game reads them, so very large games may not fit. How large is untested.
 
 ## Controls
