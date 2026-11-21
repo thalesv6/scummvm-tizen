@@ -58,6 +58,18 @@ if [ "$BUNDLE_FREEWARE_GAMES" = true ]; then
 	# Both Drascula zips ship a readme.txt, and the game's license requires keeping each one intact.
 	mv "$WIDGET/data/games/drascula/readme.txt" "$WIDGET/data/games/drascula/readme-game.txt"
 	fetch_game drascula 32bdb6d5163e538ffe20f6320e20e0b24050823be516775364be629ab1b52eee "https://downloads.scummvm.org/frs/extras/Drascula_%20The%20Vampire%20Strikes%20Back/drascula-audio-mp3-2.0.zip"
+
+	# The same games unpacked, for GitHub Pages, in the layout tools/pc-server.py serves (list.json + files/),
+	# so the TV downloads them with its "Copy from PC" code. Copied before the http-fs index files are added.
+	MIRROR=/work/freeware-mirror
+	rm -rf "$MIRROR"
+	mkdir -p "$MIRROR/files"
+	cp -r "$WIDGET/data/games/." "$MIRROR/files/"
+	rm -f "$MIRROR/files/index.json"
+	(cd "$MIRROR/files" && find . -type f -printf '%P\t%s\n') | python3 -c '
+import json, sys
+print(json.dumps({path: int(size) for path, size in (line.rstrip("\n").split("\t") for line in sys.stdin)}))
+' > "$MIRROR/list.json"
 else
 	WGT_NAME=ScummVM-no-games.wgt
 fi

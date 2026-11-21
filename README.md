@@ -30,6 +30,9 @@ Beneath a Steel Sky (CD), Flight of the Amazon Queen, Lure of the Temptress and 
 Your own games can be added without rebuilding. On the TV, holding **Play/Pause** (or the **Yellow** key) opens
 **Manage games**, which copies a game to the TV. Once copied, it runs without the PC or the USB drive.
 
+- **From the internet:** "Download free games" lists the four freeware games and copies the one you pick.
+  This is how `ScummVM-no-games.wgt` gets them. The release workflow publishes them, unpacked and with their license
+  files, on this project's GitHub Pages.
 - **From a PC:** put each game in a subfolder of `pc-games/` and start the server (Python only, nothing to install):
 
   ```bash

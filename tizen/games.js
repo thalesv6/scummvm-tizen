@@ -14,6 +14,8 @@
 	var KEY_NUMPAD_0 = 96;
 
 	var PC_PORT = 8765;
+	// The freeware games, unpacked by the release workflow and published on GitHub Pages, which allows cross-origin reads.
+	var FREEWARE_MIRROR_URL = 'https://thalesv6.github.io/scummvm-tizen';
 	var TV_DATA_PREFIX = '/data/tv/';
 	var DATA_ROOT_INDEX = '/data/index.json';
 	var INDEX_FILE = 'index.json';
@@ -204,20 +206,20 @@
 		return previousFetch(input, init);
 	};
 
-	// ---- Sources: the PC script and USB drives ----
+	// ---- Sources: servers with the pc-server.py layout (the PC, the freeware mirror) and USB drives ----
 
 	function pcUrl(address, path) {
 		return 'http://' + address + ':' + PC_PORT + path;
 	}
 
-	function fetchPcFileList(address) {
-		return fetch(pcUrl(address, '/list.json')).then(function (response) {
+	function fetchFileList(serverUrl) {
+		return fetch(serverUrl + '/list.json').then(function (response) {
 			if (!response.ok) throw new Error('HTTP ' + response.status);
 			return response.json();
 		});
 	}
 
-	function pcGameNames(fileList) {
+	function gameNames(fileList) {
 		var names = {};
 		Object.keys(fileList).forEach(function (path) {
 			if (path.indexOf('/') > 0) names[path.split('/')[0]] = true;
@@ -225,11 +227,11 @@
 		return Object.keys(names).sort();
 	}
 
-	async function copyGameFromPc(address, game, fileList, onProgress) {
+	async function copyGameFromServer(serverUrl, game, fileList, onProgress) {
 		var paths = Object.keys(fileList).filter(function (path) { return path.indexOf(game + '/') === 0; });
 		for (var i = 0; i < paths.length; i++) {
 			onProgress(i + 1, paths.length, paths[i]);
-			var response = await fetch(pcUrl(address, '/files/' + paths[i].split('/').map(encodeURIComponent).join('/')));
+			var response = await fetch(serverUrl + '/files/' + paths[i].split('/').map(encodeURIComponent).join('/'));
 			if (!response.ok) throw new Error(paths[i] + ': HTTP ' + response.status);
 			await putFile(paths[i], await response.arrayBuffer());
 		}
@@ -418,6 +420,7 @@
 			title: 'Manage games',
 			message: 'Copied games stay on the TV.\nTo play: "Add Game..." → /data/tv → game folder.',
 			items: [
+				{ label: 'Download free games', run: freewareGamesMenu },
 				{ label: 'Copy from PC', run: pcGamesMenu },
 				{ label: 'Copy from USB drive', run: usbDrivesMenu },
 				{ label: 'Send from phone', run: phoneMenu },
@@ -511,33 +514,44 @@
 		if (savedPcAddress()) next(savedPcAddress()); else pcAddressMenu(function () { next(savedPcAddress()); });
 	}
 
+	// Lists the games on a server with the pc-server.py layout and copies the one picked.
+	function serverGamesMenu(title, serverUrl, emptyMessage, unreachableMessage) {
+		show({ title: title, message: 'Looking for games...', items: [], onBack: mainMenu });
+		fetchFileList(serverUrl).then(function (fileList) {
+			var games = gameNames(fileList);
+			if (!games.length) {
+				messageScreen(title, emptyMessage, mainMenu);
+				return;
+			}
+			show({
+				title: title,
+				message: 'Choose a game:',
+				items: games.map(function (game) {
+					return {
+						label: game,
+						run: function () {
+							runCopy(game, function (onProgress) { return copyGameFromServer(serverUrl, game, fileList, onProgress); });
+						}
+					};
+				}).concat([{ label: 'Back', run: mainMenu }]),
+				onBack: mainMenu
+			});
+		}, function () {
+			messageScreen(title, unreachableMessage, mainMenu);
+		});
+	}
+
 	function pcGamesMenu() {
 		withPcAddress(function (address) {
-			show({ title: 'Copy from PC', message: 'Looking for ' + address + '...', items: [], onBack: mainMenu });
-			fetchPcFileList(address).then(function (fileList) {
-				var games = pcGameNames(fileList);
-				if (!games.length) {
-					messageScreen('Copy from PC', 'The games folder on the PC is empty.', mainMenu);
-					return;
-				}
-				show({
-					title: 'Copy from PC',
-					message: 'Choose a game:',
-					items: games.map(function (game) {
-						return {
-							label: game,
-							run: function () {
-								runCopy(game, function (onProgress) { return copyGameFromPc(address, game, fileList, onProgress); });
-							}
-						};
-					}).concat([{ label: 'Back', run: mainMenu }]),
-					onBack: mainMenu
-				});
-			}, function () {
-				messageScreen('Copy from PC', 'Could not reach the PC at ' + address + '.\nOn the PC, run: python tools/pc-server.py\n' +
-					'and check the address it prints.', mainMenu);
-			});
+			serverGamesMenu('Copy from PC', pcUrl(address, ''), 'The games folder on the PC is empty.',
+				'Could not reach the PC at ' + address + '.\nOn the PC, run: python tools/pc-server.py\n' +
+				'and check the address it prints.');
 		});
+	}
+
+	function freewareGamesMenu() {
+		serverGamesMenu('Download free games', FREEWARE_MIRROR_URL, 'The download list is empty.',
+			'Could not reach ' + FREEWARE_MIRROR_URL + '.\nCheck that the TV is online.');
 	}
 
 	function usbDrivesMenu() {
@@ -690,7 +704,8 @@
 
 	var DOWNLOAD_TEST_URLS = [
 		'https://downloads.scummvm.org/frs/extras/Lure%20of%20the%20Temptress/lure-1.1.zip',
-		'https://raw.githubusercontent.com/scummvm/scummvm-icons/master/icons/lure-lure.png'
+		'https://raw.githubusercontent.com/scummvm/scummvm-icons/master/icons/lure-lure.png',
+		FREEWARE_MIRROR_URL + '/list.json'
 	];
 
 	function tizenCapability(key) {

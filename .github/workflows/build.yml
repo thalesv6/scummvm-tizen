@@ -1,4 +1,4 @@
-# A v* tag builds both packages and publishes them as a pre-release.
+# A v* tag builds both packages, publishes them as a pre-release and puts the freeware mirror on GitHub Pages.
 name: Build
 
 on:
@@ -31,3 +31,21 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" --prerelease --generate-notes *.wgt
+      - uses: actions/upload-pages-artifact@v3
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          path: freeware-mirror
+
+  pages:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
