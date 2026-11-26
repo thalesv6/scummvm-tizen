@@ -63,7 +63,7 @@ under **Global Options → Keymaps**.
 ### Remote
 
 Everything works with the small Smart Remote, which has no color keys of its own. The app shows this map
-the first time it opens, and again under **Manage games → Controls help**.
+the first time it opens, under **Manage games → Controls help**, and in ScummVM's own **Help**, tab **TV remote**.
 
 | Key | Action |
 | --- | --- |
@@ -130,6 +130,8 @@ The build pins one ScummVM commit and applies `patches/*.patch`:
 
 - `emscripten-delay-runs-timers`: keeps audio from stuttering during long in-game delays.
 - `emscripten-tv-keymap-defaults`: Back as `AC_BACK` and the gamepad D-pad as the cursor.
+- `emscripten-tv-page-fullscreen`: fullscreen covers the whole page, so the help and game manager stay visible.
+- `emscripten-tv-remote-help`: a **TV remote** tab in ScummVM's Help, with the controls and a note about this port.
 
 ## License
 

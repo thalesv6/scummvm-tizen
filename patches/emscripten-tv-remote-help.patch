@@ -1,0 +1,69 @@
+diff --git a/backends/platform/sdl/emscripten/emscripten.cpp b/backends/platform/sdl/emscripten/emscripten.cpp
+--- a/backends/platform/sdl/emscripten/emscripten.cpp
++++ b/backends/platform/sdl/emscripten/emscripten.cpp
+@@ -35,6 +35,7 @@
+ #include "backends/keymapper/keymapper.h"
+ #include "backends/keymapper/keymapper-defaults.h"
+ #include "backends/keymapper/standard-actions.h"
++#include "common/array.h"
+ #include "common/file.h"
+ #ifdef USE_TTS
+ #include "backends/text-to-speech/emscripten/emscripten-text-to-speech.h"
+@@ -280,6 +281,46 @@
+ 	return bindings;
+ }
+ 
++// Not translated: the TV app around ScummVM is English only.
++static const char *const tvRemoteHelp =
++"## TV remote\n"
++"\n"
++"| Button | Action\n"
++"| -------|-------\n"
++"| Arrows | Move the cursor\n"
++"| OK | Click (hold to drag)\n"
++"| Play/Pause | Right click\n"
++"| Back | Skip a scene, close a menu\n"
++"| Back held | ScummVM menu (save, load, quit)\n"
++"| CH+ / CH- | Skip a line of dialogue / virtual keyboard\n"
++"| Play/Pause held | Manage games\n"
++"\n"
++"## Adding your own games\n"
++"\n"
++"Hold **Play/Pause** (or press **Yellow**) to open **Manage games**. It downloads the free games, copies games "
++"from a PC, a phone or a USB drive, and sets the cursor speed. Add a copied game with **Add Game...**, "
++"then `/data/tv` and the game's folder.\n"
++"\n"
++"## About this port\n"
++"\n"
++"This is an unofficial build of ScummVM for Samsung Tizen TVs, not made by the ScummVM team. Report problems at "
++"[github.com/thalesv6/scummvm-tizen](https://github.com/thalesv6/scummvm-tizen/issues), with a photo of "
++"**Manage games**, **TV info**.\n";
++
++const char * const *OSystem_Emscripten::buildHelpDialogData() {
++	// Built once: the Help dialog keeps the pointer.
++	static Common::Array<const char *> tabs;
++	if (tabs.empty()) {
++		tabs.push_back("TV remote");
++		tabs.push_back("");
++		tabs.push_back(tvRemoteHelp);
++		for (const char * const *tab = OSystem_SDL::buildHelpDialogData(); *tab; tab++)
++			tabs.push_back(*tab);
++		tabs.push_back(nullptr);
++	}
++	return tabs.data();
++}
++
+ #ifdef USE_CLOUD
+ bool OSystem_Emscripten::openUrl(const Common::String &url) {
+ 	if(url.hasPrefix("https://cloud.scummvm.org/")){
+diff --git a/backends/platform/sdl/emscripten/emscripten.h b/backends/platform/sdl/emscripten/emscripten.h
+--- a/backends/platform/sdl/emscripten/emscripten.h
++++ b/backends/platform/sdl/emscripten/emscripten.h
+@@ -56,6 +56,7 @@
+ 	void exportFile(const Common::Path &filename);
+ 	void delayMillis(uint msecs) override;
+ 	Common::KeymapperDefaultBindings *getKeymapperDefaultBindings() override;
++	const char * const *buildHelpDialogData() override;
+ 	void init() override;
+ 	void addSysArchivesToSearchSet(Common::SearchSet &s, int priority) override;
+ 

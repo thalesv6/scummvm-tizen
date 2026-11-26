@@ -826,5 +826,16 @@
 		stop(event);
 	}, true);
 
-	if (!helpWasSeen()) helpScreen(closeFirstRunHelp);
+	// ScummVM sets the page title when its window opens; before that it is still loading.
+	function whenScummVMOpens(run) {
+		var loadingTitle = document.title;
+		var observer = new MutationObserver(function () {
+			if (document.title === loadingTitle) return;
+			observer.disconnect();
+			run();
+		});
+		observer.observe(document.head, { childList: true, subtree: true, characterData: true });
+	}
+
+	if (!helpWasSeen()) whenScummVMOpens(function () { helpScreen(closeFirstRunHelp); });
 })();

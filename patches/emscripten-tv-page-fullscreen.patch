@@ -1,0 +1,16 @@
+diff --git a/backends/platform/sdl/emscripten/emscripten.cpp b/backends/platform/sdl/emscripten/emscripten.cpp
+--- a/backends/platform/sdl/emscripten/emscripten.cpp
++++ b/backends/platform/sdl/emscripten/emscripten.cpp
+@@ -46,9 +46,10 @@
+ });
+ 
+ EM_JS(void, toggleFullscreen, (bool enable), {
+-	let canvas = document.getElementById('canvas');
++	// The whole page, not just the canvas: a fullscreen element hides every element outside it,
++	// and the TV app draws its help and game manager above the canvas.
+ 	if (enable && !document.fullscreenElement) {
+-		canvas.requestFullscreen();
++		document.documentElement.requestFullscreen();
+ 	}
+ 	if (!enable && document.fullscreenElement) {
+ 		document.exitFullscreen();
