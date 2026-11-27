@@ -20,10 +20,16 @@ fi
 cd "$SRC"
 git fetch -q origin "$SCUMMVM_COMMIT" 2>/dev/null || true
 git checkout -q "$SCUMMVM_COMMIT"
-# Skip patches that are already applied, so make does not recompile them on every build.
-for patch in /work/patches/*.patch; do
-	git apply --check -R "$patch" 2>/dev/null || git apply "$patch"
-done
+# Several patches touch the same files, so one cannot be checked or reverted on its own; the whole set is
+# reapplied when any of them changes, and left alone otherwise so make does not recompile on every build.
+PATCHES_SUM=$(cat /work/patches/*.patch | sha256sum)
+if [ "$(cat .tizen-patches 2>/dev/null)" != "$PATCHES_SUM" ]; then
+	git checkout -q -- .
+	for patch in /work/patches/*.patch; do
+		git apply "$patch"
+	done
+	echo "$PATCHES_SUM" > .tizen-patches
+fi
 
 # configure rewrites config.h and forces a full rebuild, so only rerun it when the flags change.
 TASKS="make dist"
