@@ -7,7 +7,7 @@ diff --git a/backends/platform/sdl/emscripten/emscripten.cpp b/backends/platform
  EM_JS(void, toggleFullscreen, (bool enable), {
 -	let canvas = document.getElementById('canvas');
 +	// The whole page, not just the canvas: a fullscreen element hides every element outside it,
-+	// and the TV app draws its help and game manager above the canvas.
++	// and the TV app draws its help and TV settings menu above the canvas.
  	if (enable && !document.fullscreenElement) {
 -		canvas.requestFullscreen();
 +		document.documentElement.requestFullscreen();

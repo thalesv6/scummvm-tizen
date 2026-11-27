@@ -1,0 +1,50 @@
+diff --git a/gui/launcher.cpp b/gui/launcher.cpp
+--- a/gui/launcher.cpp
++++ b/gui/launcher.cpp
+@@ -19,6 +19,12 @@
+  *
+  */
+ 
++#ifdef __EMSCRIPTEN__
++// emscripten.h uses FILE, which common/forbidden.h blocks unless it is allowed before the first include.
++#define FORBIDDEN_SYMBOL_EXCEPTION_FILE
++#include <emscripten.h>
++#endif
++
+ #include "base/version.h"
+ 
+ #include "common/config-manager.h"
+@@ -73,6 +79,7 @@
+ 	kAddGameCmd = 'ADDG',
+ 	kMassAddGameCmd = 'MADD',
+ 	kDownloadGameCmd = 'DWNG',
++	kTvSettingsCmd = 'TVST',
+ 	kEditGameCmd = 'EDTG',
+ 	kRemoveGameCmd = 'REMG',
+ 	kLoadGameCmd = 'LOAD',
+@@ -284,6 +291,12 @@
+ 		new ButtonWidget(this, _title + ".DownloadGamesButton", _("Download Games"), _("Download freeware games for ScummVM"), kDownloadGameCmd);
+ 	}
+ #endif
++#ifdef __EMSCRIPTEN__
++	// The TV settings menu takes the place every theme keeps for Download Games, which needs USE_DLC.
++	// Not translated: the TV settings menu itself is English only.
++	new ButtonWidget(this, _title + ".DownloadGamesButton", Common::U32String("TV settings..."),
++		Common::U32String("Copy games to the TV, cursor speed, controls help"), kTvSettingsCmd);
++#endif
+ 
+ 	// Above the lowest button rows: two more buttons (directly below the list box)
+ 	DropdownButtonWidget *addButton =
+@@ -809,6 +822,12 @@
+ 	case kMassAddGameCmd:
+ 		massAddGame();
+ 		break;
++#ifdef __EMSCRIPTEN__
++	case kTvSettingsCmd:
++		// games.js draws the TV settings menu above the canvas.
++		emscripten_run_script("window.openTvSettings()");
++		break;
++#endif
+ #if defined(USE_DLC)
+ 	case kDownloadGameCmd: {
+ 		DLCsDialog downloader;

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-/* Game manager: copies games from the PC (tools/pc-server.py) or a USB drive into the TV's IndexedDB
+/* TV settings menu: copies games from the PC (tools/pc-server.py) or a USB drive into the TV's IndexedDB
    and serves them to ScummVM as /data/tv/<game>/... The Yellow key opens it. Loaded after tv.js. */
 (function () {
 	var KEY_YELLOW = 405;
@@ -417,7 +417,7 @@
 	function mainMenu() {
 		var address = savedPcAddress();
 		show({
-			title: 'Manage games',
+			title: 'TV settings',
 			message: 'Copied games stay on the TV.\nTo play: "Add Game..." → /data/tv → game folder.',
 			items: [
 				{ label: 'Download free games', run: freewareGamesMenu },
@@ -445,9 +445,10 @@
 				'Back: skip a scene, close a menu\n' +
 				'Back held: ScummVM menu (save, load, quit)\n' +
 				'CH+: skip a line of dialogue    CH−: virtual keyboard\n' +
-				'Play/Pause held: this game manager, to add your own games\n\n' +
+				'Play/Pause twice: TV settings, to add your own games\n' +
+				'(also the "TV settings..." button next to "Add Game...")\n\n' +
 				'To play: point at a game and click Start.\n' +
-				'This help stays under Manage games → Controls help.',
+				'This help stays under TV settings → Controls help.',
 			items: [{ label: 'Got it', run: onBack }],
 			onBack: onBack
 		});
@@ -470,8 +471,8 @@
 		closeMenu();
 	}
 
-	// tv.js opens the menu when Play/Pause is held: the small remote has no Yellow key of its own.
-	window.openGameManager = mainMenu;
+	// tv.js opens the menu on two taps of Play/Pause: the small remote has no Yellow key of its own.
+	window.openTvSettings = mainMenu;
 
 	// Redraws the menu with the new speed in the label, keeping the focus on this item.
 	function changeCursorSpeed() {

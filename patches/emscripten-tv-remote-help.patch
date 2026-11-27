@@ -25,11 +25,11 @@ diff --git a/backends/platform/sdl/emscripten/emscripten.cpp b/backends/platform
 +"| Back | Skip a scene, close a menu\n"
 +"| Back held | ScummVM menu (save, load, quit)\n"
 +"| CH+ / CH- | Skip a line of dialogue / virtual keyboard\n"
-+"| Play/Pause held | Manage games\n"
++"| Play/Pause twice | TV settings\n"
 +"\n"
 +"## Adding your own games\n"
 +"\n"
-+"Hold **Play/Pause** (or press **Yellow**) to open **Manage games**. It downloads the free games, copies games "
++"Click **TV settings...** next to **Add Game...**, or press **Play/Pause** twice. It downloads the free games, copies games "
 +"from a PC, a phone or a USB drive, and sets the cursor speed. Add a copied game with **Add Game...**, "
 +"then `/data/tv` and the game's folder.\n"
 +"\n"
@@ -37,7 +37,7 @@ diff --git a/backends/platform/sdl/emscripten/emscripten.cpp b/backends/platform
 +"\n"
 +"This is an unofficial build of ScummVM for Samsung Tizen TVs, not made by the ScummVM team. Report problems at "
 +"[github.com/thalesv6/scummvm-tizen](https://github.com/thalesv6/scummvm-tizen/issues), with a photo of "
-+"**Manage games**, **TV info**.\n";
++"**TV settings**, **TV info**.\n";
 +
 +const char * const *OSystem_Emscripten::buildHelpDialogData() {
 +	// Built once: the Help dialog keeps the pointer.

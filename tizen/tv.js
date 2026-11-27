@@ -40,8 +40,8 @@ if (location.protocol === 'file:') {
 }
 
 // Remote control → mouse and ScummVM keys, built for the small Smart Remote (arrows, OK, Back, Play/Pause, CH+/−).
-// Arrows move ScummVM's cursor; OK is the left button (held: drag); Play/Pause is a right click (held: game manager);
-// Back is AC_BACK (held: ScummVM menu). A USB keyboard switches arrows and OK back to plain keys.
+// Arrows move ScummVM's cursor; OK is the left button (held: drag); Play/Pause is a right click (two taps: TV
+// settings); Back is AC_BACK (held: ScummVM menu). A USB keyboard switches arrows and OK back to plain keys.
 (function () {
 	// Cursor tuning, in screen pixels; adjust on the real TV.
 	// A tap moves one step; holding waits HOLD_DELAY, then glides and accelerates like key repeat.
@@ -50,13 +50,15 @@ if (location.protocol === 'file:') {
 	var CURSOR_SPEED_START = 2;
 	var CURSOR_SPEED_MAX = 22;
 	var CURSOR_ACCEL_MS = 1200;
-	// Multiplies the glide speed; picked in the game manager and kept across restarts.
+	// Multiplies the glide speed; picked in TV settings and kept across restarts.
 	var CURSOR_SPEED_FACTORS = { Slow: 0.5, Normal: 1, Fast: 1.6 };
 	var CURSOR_SPEED_STORAGE_KEY = 'scummvm-cursor-speed';
 
-	// How long Back / Play/Pause must be held to count as a hold instead of a tap.
+	// How long Back must be held to count as a hold instead of a tap.
 	var BACK_HOLD_MS = 800;
-	var PLAY_PAUSE_HOLD_MS = 800;
+	// Play/Pause cannot be held: the TV keeps a long press for its own "About this TV" menu.
+	// A second tap within this time opens TV settings, so a single tap's right click waits this long.
+	var PLAY_PAUSE_DOUBLE_TAP_MS = 400;
 	var MODIFIER_RELEASE_DELAY_MS = 100;
 
 	var KEY_OK = 13;
@@ -69,7 +71,7 @@ if (location.protocol === 'file:') {
 	var AC_BACK = { key: 'BrowserBack', code: 'BrowserBack' };
 	var FORWARDED_KEYS = {
 		403: SCUMMVM_MENU,                                // Red: ScummVM global menu (save/load/quit)
-		// Yellow (405) opens the game manager in games.js.
+		// Yellow (405) opens TV settings in games.js.
 		406: { key: 'F7', code: 'F7', ctrl: true },       // Blue: virtual keyboard
 		427: { key: '.', code: 'Period' },                // CH+: skip dialogue line
 		428: { key: 'F7', code: 'F7', ctrl: true }        // CH-: virtual keyboard
@@ -87,6 +89,7 @@ if (location.protocol === 'file:') {
 	var keyboardMode = false;
 	var holdTimers = {};
 	var heldLong = {};
+	var playPauseTapTimer = null;
 	var cursorSpeed = savedCursorSpeed();
 
 	function savedCursorSpeed() {
@@ -98,7 +101,7 @@ if (location.protocol === 'file:') {
 		}
 	}
 
-	// Called by the game manager's "Cursor speed" item; returns the new speed's name.
+	// Called by TV settings' "Cursor speed" item; returns the new speed's name.
 	window.nextCursorSpeed = function () {
 		var names = Object.keys(CURSOR_SPEED_FACTORS);
 		cursorSpeed = names[(names.indexOf(cursorSpeed) + 1) % names.length];
@@ -191,6 +194,20 @@ if (location.protocol === 'file:') {
 		return !heldLong[code];
 	}
 
+	function onPlayPauseTap() {
+		if (playPauseTapTimer) {
+			clearTimeout(playPauseTapTimer);
+			playPauseTapTimer = null;
+			window.openTvSettings();
+			return;
+		}
+		playPauseTapTimer = setTimeout(function () {
+			playPauseTapTimer = null;
+			pressButton(2);
+			releaseButton(2);
+		}, PLAY_PAUSE_DOUBLE_TAP_MS);
+	}
+
 	function isRemoteOnlyKey(code) {
 		return code === KEY_BACK || code === KEY_GREEN || code === KEY_PLAY_PAUSE || FORWARDED_KEYS[code] !== undefined;
 	}
@@ -225,7 +242,7 @@ if (location.protocol === 'file:') {
 		} else if (code === KEY_BACK) {
 			if (!event.repeat) startHold(code, BACK_HOLD_MS, function () { tapForwardedKey(SCUMMVM_MENU); });
 		} else if (code === KEY_PLAY_PAUSE) {
-			if (!event.repeat) startHold(code, PLAY_PAUSE_HOLD_MS, window.openGameManager);
+			if (!event.repeat) onPlayPauseTap();
 		} else if (code === KEY_GREEN) {
 			if (!event.repeat) pressButton(2);
 		} else if (FORWARDED_KEYS[code]) {
@@ -248,14 +265,9 @@ if (location.protocol === 'file:') {
 			releaseButton(0);
 		} else if (code === KEY_BACK) {
 			if (endHoldWasTap(code)) tapForwardedKey(AC_BACK);
-		} else if (code === KEY_PLAY_PAUSE) {
-			if (endHoldWasTap(code)) {
-				pressButton(2);
-				releaseButton(2);
-			}
 		} else if (code === KEY_GREEN) {
 			releaseButton(2);
-		} else if (!FORWARDED_KEYS[code]) {
+		} else if (code !== KEY_PLAY_PAUSE && !FORWARDED_KEYS[code]) {
 			return;
 		}
 		event.preventDefault();
@@ -269,7 +281,7 @@ if (location.protocol === 'file:') {
 		cursorY = event.clientY;
 	}, true);
 
-	// On document, not window: the game manager (games.js) listens on window and sees keys first.
+	// On document, not window: the TV settings menu (games.js) listens on window and sees keys first.
 	document.addEventListener('keydown', onKeyDown, true);
 	document.addEventListener('keyup', onKeyUp, true);
 

@@ -5,7 +5,7 @@ packaged as a Tizen `.wgt` app, with TV remote and gamepad controls and a way to
 
 **Experimental.** It has only had a few minutes of play on a real TV, where it ran and was playable.
 Longer sessions, big games and save data surviving app updates are still untested. Please report what you find,
-with a photo of **Manage games → TV info**, which shows your TV's model, its remote keys and whether downloads work.
+with a photo of **TV settings → TV info**, which shows your TV's model, its remote keys and whether downloads work.
 
 This project is not affiliated with or endorsed by the ScummVM team. Bugs here belong here, not on their tracker.
 
@@ -27,8 +27,8 @@ Install it with Apps2Samsung, which re-signs the package with your TV's certific
 
 Beneath a Steel Sky (CD), Flight of the Amazon Queen, Lure of the Temptress and Drascula come with `ScummVM.wgt`.
 
-Your own games can be added without rebuilding. On the TV, holding **Play/Pause** (or the **Yellow** key) opens
-**Manage games**, which copies a game to the TV. Once copied, it runs without the PC or the USB drive.
+Your own games can be added without rebuilding. On the TV, the **TV settings...** button next to **Add Game...**
+(or pressing **Play/Pause** twice, or the **Yellow** key) opens **TV settings**, which copies a game to the TV. Once copied, it runs without the PC or the USB drive.
 
 - **From the internet:** "Download free games" lists the four freeware games and copies the one you pick.
   This is how `ScummVM-no-games.wgt` gets them. The release workflow publishes them, unpacked and with their license
@@ -63,21 +63,24 @@ under **Global Options → Keymaps**.
 ### Remote
 
 Everything works with the small Smart Remote, which has no color keys of its own. The app shows this map
-the first time it opens, under **Manage games → Controls help**, and in ScummVM's own **Help**, tab **TV remote**.
+the first time it opens, under **TV settings → Controls help**, and in ScummVM's own **Help**, tab **TV remote**.
 
 | Key | Action |
 | --- | --- |
 | Arrows | Move the cursor (tap = 4 px, hold = glide and accelerate) |
 | OK | Left click (hold to drag) |
 | Play/Pause | Right click |
-| Play/Pause held | Manage games |
+| Play/Pause twice | TV settings |
 | Back | Skip cutscene, close menus (`AC_BACK`) |
 | Back held | ScummVM menu (save, load, pause, quit) |
 | CH+ / CH− | Skip dialogue line / virtual keyboard |
 
-The cursor's glide speed is set under **Manage games → Cursor speed**.
+Play/Pause cannot be held: the TV keeps a long press for its own menu. A single tap's right click therefore waits
+0.4 s to tell it apart from a double tap.
 
-Remotes with color keys also get Red (ScummVM menu), Green (right click), Yellow (manage games) and
+The cursor's glide speed is set under **TV settings → Cursor speed**.
+
+Remotes with color keys also get Red (ScummVM menu), Green (right click), Yellow (TV settings) and
 Blue (virtual keyboard). On the small remote they appear through the **123** button.
 
 ### Gamepad
@@ -96,7 +99,7 @@ Blue (virtual keyboard). On the small remote they appear through the **123** but
 The mouse works directly. Typing a letter on the keyboard sends arrows and Enter to the game as normal keys;
 pressing Back or a color key on the remote returns to remote mode.
 
-Timing and speed settings are at the top of `tizen/tv.js` (`CURSOR_*`, `*_HOLD_MS`).
+Timing and speed settings are at the top of `tizen/tv.js` (`CURSOR_*`, `BACK_HOLD_MS`, `PLAY_PAUSE_DOUBLE_TAP_MS`).
 
 ## Build
 
@@ -130,7 +133,9 @@ The build pins one ScummVM commit and applies `patches/*.patch`:
 
 - `emscripten-delay-runs-timers`: keeps audio from stuttering during long in-game delays.
 - `emscripten-tv-keymap-defaults`: Back as `AC_BACK` and the gamepad D-pad as the cursor.
-- `emscripten-tv-page-fullscreen`: fullscreen covers the whole page, so the help and game manager stay visible.
+- `emscripten-tv-launcher-tv-settings`: a **TV settings...** button in the launcher, in the place every theme keeps
+  for **Download Games** (which needs DLC support, off in this build).
+- `emscripten-tv-page-fullscreen`: fullscreen covers the whole page, so the help and TV settings menu stay visible.
 - `emscripten-tv-remote-help`: a **TV remote** tab in ScummVM's Help, with the controls and a note about this port.
 
 ## License
